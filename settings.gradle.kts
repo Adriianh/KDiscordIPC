@@ -1,6 +1,5 @@
 rootProject.name = "KDiscordIPC"
 
-enableFeaturePreview("VERSION_CATALOGS")
 dependencyResolutionManagement {
     versionCatalogs {
         create("libs") {

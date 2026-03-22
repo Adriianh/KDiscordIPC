@@ -5,7 +5,7 @@ plugins {
     `maven-publish`
 }
 
-group = "dev.cbyrne"
+group = "com.github.Adriianh"
 version = "0.2.5"
 
 repositories {
