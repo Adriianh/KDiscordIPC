@@ -19,7 +19,8 @@ data class Activity(
     var party: Party? = null,
     var secrets: Secrets? = null,
     var buttons: MutableList<Button>? = null,
-    var instance: Boolean? = false
+    var instance: Boolean? = false,
+    var type: ActivityType? = ActivityType.Playing
 ) {
     @Serializable
     data class Timestamps(
@@ -123,4 +124,8 @@ fun Activity.party(id: String, currentSize: Int, maxSize: Int) {
 
 fun Activity.secrets(join: String? = null, match: String? = null, spectate: String? = null) {
     this.secrets = Activity.Secrets(join, match, spectate)
+}
+
+fun Activity.type(type: ActivityType) {
+    this.type = type
 }

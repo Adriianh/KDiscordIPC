@@ -18,7 +18,7 @@ data class InboundActivity(
     val sessionId: String,
     val state: String,
     val timestamps: Timestamps? = null,
-    val type: Int
+    val type: ActivityType
 ) {
     @Serializable
     data class Party(
