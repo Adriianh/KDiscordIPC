@@ -12,7 +12,7 @@ import java.util.*
 val logger: Logger = LogManager.getLogger("Example")
 
 suspend fun main() {
-    val ipc = KDiscordIPC("945428344806183003")
+    val ipc = KDiscordIPC("1485113215905042515")
     logger.info("Starting example!")
 
     ipc.on<ReadyEvent> {
@@ -20,6 +20,7 @@ suspend fun main() {
 
         // Set the user's activity (a.k.a. rich presence)
         ipc.activityManager.setActivity("Hello") {
+            type(ActivityType.Listening)
             largeImage("https://cdn.prod.website-files.com/6257adef93867e50d84d30e2/62fddf0fde45a8baedcc7ee5_847541504914fd33810e70a0ea73177e%20(2)-1.png", "KDiscordIPC")
             smallImage("https://cdn.prod.website-files.com/6257adef93867e50d84d30e2/62fddf0fde45a8baedcc7ee5_847541504914fd33810e70a0ea73177e%20(2)-1.png", "Testing")
 
