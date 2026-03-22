@@ -20,7 +20,9 @@ data class Activity(
     var secrets: Secrets? = null,
     var buttons: MutableList<Button>? = null,
     var instance: Boolean? = false,
-    var type: ActivityType? = ActivityType.Playing
+    var type: ActivityType? = ActivityType.Playing,
+    @SerialName("status_display_type")
+    var statusDisplayType: Int? = null
 ) {
     @Serializable
     data class Timestamps(
