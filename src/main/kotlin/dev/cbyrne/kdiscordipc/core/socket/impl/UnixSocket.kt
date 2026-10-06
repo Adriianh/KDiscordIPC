@@ -7,37 +7,26 @@ import org.newsclub.net.unix.AFUNIXSocket
 import org.newsclub.net.unix.AFUNIXSocketAddress
 import java.io.DataInputStream
 import java.io.File
-import java.nio.ByteBuffer
 
 class UnixSocket : Socket {
     private val socket = AFUNIXSocket.newInstance()
+    private val inputStream by lazy { DataInputStream(socket.inputStream) }
 
     override val connected: Boolean
-        get() = socket.isConnected
+        get() = socket.isConnected && !socket.isClosed
 
     override fun connect(file: File) {
         socket.connect(AFUNIXSocketAddress.of(file))
     }
 
     override fun read(): RawPacket {
-        val opcode = readLittleEndianInt()
-        val length = readLittleEndianInt()
+        val opcode = inputStream.readInt().reverse()
+        val length = inputStream.readInt().reverse()
 
-        val stream = DataInputStream(socket.inputStream)
         val data = ByteArray(length)
-        stream.readFully(data)
+        inputStream.readFully(data)
 
         return RawPacket(opcode, length, data)
-    }
-
-    private fun readLittleEndianInt() =
-        ByteBuffer.wrap(readBytes(4)).int.reverse()
-
-    private fun readBytes(length: Int): ByteArray {
-        val array = ByteArray(length)
-        socket.inputStream.read(array, 0, length)
-
-        return array
     }
 
     override fun write(bytes: ByteArray) {

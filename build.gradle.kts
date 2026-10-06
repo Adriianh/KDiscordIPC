@@ -33,6 +33,12 @@ dependencies {
     exampleImplementation(libs.log4j.core)
     exampleImplementation(libs.log4j.api)
     exampleImplementation(libs.log4j.slf4j)
+
+    testImplementation(kotlin("test"))
+}
+
+tasks.test {
+    useJUnitPlatform()
 }
 
 publishing {

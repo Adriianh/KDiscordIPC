@@ -16,6 +16,7 @@ import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.withContext
+import java.io.EOFException
 import java.io.File
 import java.io.IOException
 import java.net.SocketException
@@ -48,7 +49,7 @@ class SocketHandler(
                 ByteToMessageDecoder.decode(rawPacket)?.let { emit(it) }
             } catch (e: DecodeError) {
                 if (e is DecodeError.InvalidData) {
-                    KDiscordIPC.logger.error("Received invalid data, assuming that Discord has disconnected from the socket.", e)
+                    KDiscordIPC.logger.debug("Received invalid data, assuming that Discord has disconnected from the socket.")
                     disconnect()
                 }
             } catch (e: IOException) {
@@ -177,5 +178,6 @@ class SocketHandler(
      */
     private fun isDisconnectionException(e: IOException) =
         e is SocketException ||
+        e is EOFException ||
         e.message?.contains("Stream Closed", true) == true || e.message?.contains("The pipe is being closed", true) == true
 }
