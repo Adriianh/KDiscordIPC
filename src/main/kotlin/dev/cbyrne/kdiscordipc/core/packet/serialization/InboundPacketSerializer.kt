@@ -10,8 +10,11 @@ object InboundPacketSerializer : JsonContentPolymorphicSerializer<InboundPacket>
         when (val evt = element.contentOrNull("evt")) {
             "READY" -> DispatchEventPacket.Ready.serializer()
             "CURRENT_USER_UPDATE" -> DispatchEventPacket.UserUpdate.serializer()
+            "VOICE_CHANNEL_SELECT" -> DispatchEventPacket.VoiceChannelSelect.serializer()
             "VOICE_SETTINGS_UPDATE" -> DispatchEventPacket.VoiceSettingsUpdate.serializer()
             "ACTIVITY_JOIN" -> DispatchEventPacket.ActivityJoin.serializer()
+            "ACTIVITY_SPECTATE" -> DispatchEventPacket.ActivitySpectate.serializer()
+            "ACTIVITY_JOIN_REQUEST" -> DispatchEventPacket.ActivityJoinRequest.serializer()
             "ACTIVITY_INVITE" -> DispatchEventPacket.ActivityInvite.serializer()
             "ERROR" -> DispatchEventPacket.Error.serializer()
             else -> when (val command = element.contentOrNull("cmd")) {

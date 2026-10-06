@@ -63,7 +63,7 @@ suspend fun main() {
     }
 
     ipc.on<ActivityInviteEvent> {
-        logger.info("We have been invited to join ${data.user.username}'s party! (${data.activity.party.id})")
+        logger.info("We have been invited to join ${data.user.username}'s party! (${data.activity.party?.id})")
 
         ipc.activityManager.acceptInvite(data)
     }

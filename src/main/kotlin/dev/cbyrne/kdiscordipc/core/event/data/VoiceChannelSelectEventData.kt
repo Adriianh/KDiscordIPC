@@ -6,7 +6,7 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class VoiceChannelSelectEventData(
     @SerialName("channel_id")
-    val channelId: String,
+    val channelId: String? = null,
     @SerialName("guild_id")
-    val guildId: String,
+    val guildId: String? = null,
 ) : EventData()

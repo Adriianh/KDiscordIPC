@@ -28,8 +28,11 @@ object ByteToMessageDecoder {
             return when (evt) {
                 "READY" -> json.decodeFromJsonElement(DispatchEventPacket.Ready.serializer(), jsonElement)
                 "CURRENT_USER_UPDATE" -> json.decodeFromJsonElement(DispatchEventPacket.UserUpdate.serializer(), jsonElement)
+                "VOICE_CHANNEL_SELECT" -> json.decodeFromJsonElement(DispatchEventPacket.VoiceChannelSelect.serializer(), jsonElement)
                 "VOICE_SETTINGS_UPDATE" -> json.decodeFromJsonElement(DispatchEventPacket.VoiceSettingsUpdate.serializer(), jsonElement)
                 "ACTIVITY_JOIN" -> json.decodeFromJsonElement(DispatchEventPacket.ActivityJoin.serializer(), jsonElement)
+                "ACTIVITY_SPECTATE" -> json.decodeFromJsonElement(DispatchEventPacket.ActivitySpectate.serializer(), jsonElement)
+                "ACTIVITY_JOIN_REQUEST" -> json.decodeFromJsonElement(DispatchEventPacket.ActivityJoinRequest.serializer(), jsonElement)
                 "ACTIVITY_INVITE" -> json.decodeFromJsonElement(DispatchEventPacket.ActivityInvite.serializer(), jsonElement)
                 "ERROR" -> json.decodeFromJsonElement(DispatchEventPacket.Error.serializer(), jsonElement)
                 else -> when (cmd) {

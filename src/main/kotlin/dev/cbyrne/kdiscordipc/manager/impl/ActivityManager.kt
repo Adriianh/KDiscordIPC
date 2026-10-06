@@ -36,11 +36,12 @@ class ActivityManager(override val ipc: KDiscordIPC) : Manager() {
         setActivity(activity(details, state, init))
 
     suspend fun acceptInvite(data: ActivityInviteEventData): Boolean {
+        val sessionId = data.activity.sessionId ?: return false
         val result = ipc.sendPacket<InboundAcceptActivityInvitePacket>(
             AcceptActivityInvitePacket(
                 data.channelId,
                 data.messageId,
-                data.activity.sessionId,
+                sessionId,
                 data.user.id,
                 data.type
             )

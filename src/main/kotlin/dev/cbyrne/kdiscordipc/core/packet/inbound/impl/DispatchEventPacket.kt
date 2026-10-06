@@ -40,6 +40,16 @@ abstract class DispatchEventPacket(
     ) : DispatchEventPacket()
 
     @Serializable
+    data class ActivitySpectate(
+        override val data: ActivitySpectateEventData
+    ) : DispatchEventPacket()
+
+    @Serializable
+    data class ActivityJoinRequest(
+        override val data: ActivityJoinRequestEventData
+    ) : DispatchEventPacket()
+
+    @Serializable
     data class ActivityInvite(
         override val data: ActivityInviteEventData
     ) : DispatchEventPacket()

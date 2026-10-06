@@ -2,17 +2,11 @@
 
 package dev.cbyrne.kdiscordipc
 
+import dev.cbyrne.kdiscordipc.core.error.IPCError
 import dev.cbyrne.kdiscordipc.core.event.DiscordEvent
 import dev.cbyrne.kdiscordipc.core.event.Event
 import dev.cbyrne.kdiscordipc.core.event.data.ErrorEventData
-import dev.cbyrne.kdiscordipc.core.event.impl.ActivityInviteEvent
-import dev.cbyrne.kdiscordipc.core.event.impl.ActivityJoinEvent
-import dev.cbyrne.kdiscordipc.core.event.impl.CurrentUserUpdateEvent
-import dev.cbyrne.kdiscordipc.core.event.impl.ErrorEvent
-import dev.cbyrne.kdiscordipc.core.event.impl.ReadyEvent
-import dev.cbyrne.kdiscordipc.core.event.impl.VoiceSettingsUpdateEvent
-import dev.cbyrne.kdiscordipc.core.event.impl.DisconnectedEvent
-import dev.cbyrne.kdiscordipc.core.event.impl.VoiceChannelSelectEvent
+import dev.cbyrne.kdiscordipc.core.event.impl.*
 import dev.cbyrne.kdiscordipc.core.packet.inbound.InboundPacket
 import dev.cbyrne.kdiscordipc.core.packet.inbound.impl.DispatchEventPacket
 import dev.cbyrne.kdiscordipc.core.packet.inbound.impl.ErrorPacket
@@ -28,9 +22,7 @@ import dev.cbyrne.kdiscordipc.manager.impl.ApplicationManager
 import dev.cbyrne.kdiscordipc.manager.impl.RelationshipManager
 import dev.cbyrne.kdiscordipc.manager.impl.UserManager
 import dev.cbyrne.kdiscordipc.manager.impl.VoiceSettingsManager
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
+import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.filterIsInstance
@@ -69,7 +61,7 @@ class KDiscordIPC(
     private val _events = MutableSharedFlow<Event>()
     val events = _events.asSharedFlow()
 
-    private val _packets = MutableSharedFlow<InboundPacket>()
+    private val _packets = MutableSharedFlow<InboundPacket>(extraBufferCapacity = 64)
     val packets = _packets.asSharedFlow()
 
     /**
@@ -95,9 +87,17 @@ class KDiscordIPC(
                 is DispatchEventPacket.VoiceChannelSelect -> _events.emit(VoiceChannelSelectEvent(it.data))
                 is DispatchEventPacket.VoiceSettingsUpdate -> _events.emit(VoiceSettingsUpdateEvent(it.data))
                 is DispatchEventPacket.ActivityJoin -> _events.emit(ActivityJoinEvent(it.data))
+                is DispatchEventPacket.ActivitySpectate -> _events.emit(ActivitySpectateEvent(it.data))
+                is DispatchEventPacket.ActivityJoinRequest -> _events.emit(ActivityJoinRequestEvent(it.data))
                 is DispatchEventPacket.ActivityInvite -> _events.emit(ActivityInviteEvent(it.data))
-                is DispatchEventPacket.Error -> _events.emit(ErrorEvent(it.data))
-                is ErrorPacket -> _events.emit(ErrorEvent(ErrorEventData(it.code, it.message)))
+                is DispatchEventPacket.Error -> {
+                    _events.emit(ErrorEvent(it.data))
+                    _packets.emit(it)
+                }
+                is ErrorPacket -> {
+                    _events.emit(ErrorEvent(ErrorEventData(it.code, it.message)))
+                    _packets.emit(it)
+                }
                 else -> _packets.emit(it)
             }
         }
@@ -136,10 +136,25 @@ class KDiscordIPC(
         socketHandler.write(bytes)
     }
 
-    internal suspend inline fun <reified T : InboundPacket> sendPacket(packet: OutboundPacket): T {
+    internal suspend inline fun <reified T : InboundPacket> sendPacket(
+        packet: OutboundPacket,
+        timeoutMs: Long = 5000L
+    ): T {
         val nonce = UUID.randomUUID().toString()
-        writePacket(packet, nonce)
-
-        return packets.filterIsInstance<T>().first { it.nonce == nonce }
+        return withTimeout(timeoutMs) {
+            val responseDeferred = async {
+                packets.first { it.nonce == nonce }
+            }
+            writePacket(packet, nonce)
+            val response = responseDeferred.await()
+            if (response is DispatchEventPacket.Error) {
+                throw IPCError(response.data.code, response.data.message)
+            }
+            if (response is ErrorPacket) {
+                throw IPCError(response.code, response.message)
+            }
+            response as? T
+                ?: error("Expected packet of type ${T::class.simpleName}, but received ${response::class.simpleName}")
+        }
     }
 }
