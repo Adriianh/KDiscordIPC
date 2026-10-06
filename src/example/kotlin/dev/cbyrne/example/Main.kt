@@ -26,7 +26,7 @@ suspend fun main() {
 
             party(UUID.randomUUID().toString(), 1, 2)
             secrets(UUID.randomUUID().toString())
-//            button("Click me", "https://google.com")
+            button("Click me", "https://google.com")
             timestamps(System.currentTimeMillis(), System.currentTimeMillis() + 50000)
         }
 

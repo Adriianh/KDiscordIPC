@@ -8,7 +8,10 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.builtins.IntArraySerializer
 import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.descriptors.SerialDescriptor
+import kotlinx.serialization.descriptors.buildClassSerialDescriptor
+import kotlinx.serialization.descriptors.element
 import kotlinx.serialization.encoding.*
+import kotlinx.serialization.json.*
 
 @Serializable
 data class Activity(
@@ -80,11 +83,54 @@ data class Activity(
         var spectate: String? = null
     )
 
-    @Serializable
+    @Serializable(with = Button.ButtonSerializer::class)
     data class Button(
         var label: String,
-        var url: String
-    )
+        var url: String = ""
+    ) {
+        class ButtonSerializer : KSerializer<Button> {
+            override val descriptor: SerialDescriptor =
+                buildClassSerialDescriptor("dev.cbyrne.kdiscordipc.data.activity.Activity.Button") {
+                    element<String>("label")
+                    element<String>("url", isOptional = true)
+                }
+
+            override fun deserialize(decoder: Decoder): Button {
+                return if (decoder is JsonDecoder) {
+                    when (val element = decoder.decodeJsonElement()) {
+                        is JsonPrimitive -> Button(element.content, "")
+                        is JsonObject -> {
+                            val label = element["label"]?.jsonPrimitive?.content ?: ""
+                            val url = element["url"]?.jsonPrimitive?.content ?: ""
+                            Button(label, url)
+                        }
+                        else -> error("Unexpected JSON element for Button: $element")
+                    }
+                } else {
+                    decoder.decodeStructure(descriptor) {
+                        var label = ""
+                        var url = ""
+                        while (true) {
+                            when (val index = decodeElementIndex(descriptor)) {
+                                0 -> label = decodeStringElement(descriptor, 0)
+                                1 -> url = decodeStringElement(descriptor, 1)
+                                CompositeDecoder.DECODE_DONE -> break
+                                else -> error("Unexpected index: $index")
+                            }
+                        }
+                        Button(label, url)
+                    }
+                }
+            }
+
+            override fun serialize(encoder: Encoder, value: Button) {
+                encoder.encodeStructure(descriptor) {
+                    encodeStringElement(descriptor, 0, value.label)
+                    encodeStringElement(descriptor, 1, value.url)
+                }
+            }
+        }
+    }
 }
 
 fun activity(
