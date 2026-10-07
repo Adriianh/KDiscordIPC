@@ -25,7 +25,7 @@ data class Activity(
     var instance: Boolean? = false,
     var type: ActivityType? = ActivityType.Playing,
     @SerialName("status_display_type")
-    var statusDisplayType: Int? = null
+    var statusDisplayType: StatusDisplayType? = null
 ) {
     @Serializable
     data class Timestamps(
@@ -176,4 +176,12 @@ fun Activity.secrets(join: String? = null, match: String? = null, spectate: Stri
 
 fun Activity.type(type: ActivityType) {
     this.type = type
+}
+
+fun Activity.statusDisplayType(type: StatusDisplayType) {
+    this.statusDisplayType = type
+}
+
+fun Activity.statusDisplayType(value: Int) {
+    this.statusDisplayType = StatusDisplayType.values().firstOrNull { it.value == value }
 }

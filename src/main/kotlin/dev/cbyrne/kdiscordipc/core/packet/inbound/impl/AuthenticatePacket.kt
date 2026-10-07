@@ -26,10 +26,12 @@ data class AuthenticatePacket(
         data class User(
             val id: String,
             val username: String,
-            val avatar: String,
-            val discriminator: String,
+            val discriminator: String = "0",
+            @SerialName("global_name")
+            val globalName: String? = null,
+            val avatar: String? = null,
             @SerialName("public_flags")
-            val publicFlags: Int
+            val publicFlags: Int? = null
         )
     }
 }
