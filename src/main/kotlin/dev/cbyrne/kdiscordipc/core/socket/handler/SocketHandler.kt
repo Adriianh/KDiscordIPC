@@ -10,16 +10,15 @@ import dev.cbyrne.kdiscordipc.core.util.platform
 import dev.cbyrne.kdiscordipc.core.util.temporaryDirectory
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
-import kotlinx.coroutines.flow.launchIn
-import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.io.EOFException
-import java.io.File
 import java.io.IOException
 import java.net.SocketException
+import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 import kotlin.io.path.div
@@ -31,13 +30,14 @@ import kotlin.io.path.exists
  * @see Socket
  * @see KDiscordIPC
  */
+@Suppress("UNUSED_PARAMETER")
 class SocketHandler(
     scope: CoroutineScope,
     socketSupplier: () -> Socket,
     private val onDisconnect: () -> Unit
 ) {
     private val socket = socketSupplier()
-    private val outboundBytes = MutableSharedFlow<ByteArray>()
+    private val writeMutex = Mutex()
 
     val connected: Boolean
         get() = socket.connected
@@ -61,22 +61,6 @@ class SocketHandler(
             }
         }
     }.flowOn(Dispatchers.IO)
-
-    init {
-        outboundBytes.onEach {
-            try {
-                socket.write(it)
-            } catch (e: IOException) {
-                if (!isDisconnectionException(e)) {
-                    KDiscordIPC.logger.error("An error occurred when attempting to write to the Discord socket. (Attempting to disconnect if not disconnected already!): ", e)
-                }
-
-                // Attempt to disconnect, if that fails, an error will be thrown anyway. We can't send errors back
-                // to the user here.
-                disconnect()
-            }
-        }.launchIn(scope)
-    }
 
     /**
      * Connects to the Discord IPC server.
@@ -119,7 +103,19 @@ class SocketHandler(
             throw ConnectionError.NotConnected
 
         withContext(Dispatchers.IO) {
-            outboundBytes.emit(bytes)
+            writeMutex.withLock {
+                try {
+                    socket.write(bytes)
+                } catch (e: IOException) {
+                    if (!isDisconnectionException(e)) {
+                        KDiscordIPC.logger.error("An error occurred when attempting to write to the Discord socket. (Attempting to disconnect if not disconnected already!): ", e)
+                    }
+
+                    // Attempt to disconnect, if that fails, an error will be thrown anyway. We can't send errors back
+                    // to the user here.
+                    disconnect()
+                }
+            }
         }
     }
 
@@ -142,8 +138,31 @@ class SocketHandler(
      */
     private fun findIPCPath(index: Int): Path {
         // On Windows, we should immediately have some Discord IPC file within the pipe device.
+        // Do not call Files.exists() or File.exists() directly on \\.\pipe\discord-ipc-X, because querying
+        // attributes on a Windows named pipe opens and immediately closes a client handle, consuming the
+        // server's waiting pipe instance and causing the subsequent connect() to fail with ERROR_PIPE_BUSY.
         if (platform == Platform.WINDOWS) {
-            return findIPCPath(index, Paths.get("\\\\.\\pipe\\"))
+            val pipeRoot = Paths.get("\\\\.\\pipe\\")
+            val availablePipes = try {
+                Files.newDirectoryStream(pipeRoot).use { stream ->
+                    stream.mapNotNull { it.fileName?.toString() }.toSet()
+                }
+            } catch (e: IOException) {
+                null
+            }
+
+            if (availablePipes != null) {
+                for (i in index..9) {
+                    val pipeName = "discord-ipc-$i"
+                    if (pipeName in availablePipes) {
+                        return pipeRoot.resolve(pipeName)
+                    }
+                }
+
+                throw ConnectionError.NoIPCFile
+            }
+
+            return findIPCPath(index, pipeRoot)
                 ?: throw ConnectionError.NoIPCFile
         }
 
